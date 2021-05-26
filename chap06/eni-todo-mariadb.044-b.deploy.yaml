@@ -1,0 +1,86 @@
+# Deploy with ServiceAccount with view role in order to use session replication
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: khoolsa
+  namespace: example
+---
+# this should be tuned to have a more reduce access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: view
+  namespace: example
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+- kind: ServiceAccount
+  name: khoolsa
+  namespace: example
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  generation: 1
+  labels:
+    app: eni-todo
+  name: eni-todo
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: eni-todo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: eni-todo
+    spec:
+      serviceAccount: khoolsa
+      containers:
+      - image: kanedafromparis/khoolsession:eni-todo
+        imagePullPolicy: Always
+        name: eni-todo-tomcat-mariadb
+        env:
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: SPRING_PROFILES_ACTIVE
+          value: "tomcat-mariadb-kub"
+        - name: DB_DTB_USERNAME
+          value: "springuser"
+        - name: DB_DTB_PASSWORD
+          value: "mypassword-quoor-uHoe7z"
+        - name: DB_DTB_JDBC_URL
+          value: "jdbc:mysql://mariadb-0.mariadb:3306/db_todo"
+        - name: MULTIPART_LOCATION
+          value: "/usr/local/tomcat/files"
+        ports:
+        - name: http8080 
+          containerPort: 8080
+          protocol: TCP
+
+        resources:
+          requests:
+            cpu : "500m"
+            memory: "512Mi"
+          limits:
+            cpu : "2000m"
+            memory: "512Mi"

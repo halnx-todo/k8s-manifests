@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: eni-todo-h2
+  name: eni-todo-h2
+spec:
+  containers:
+  - image: eni-todo-tomcat-h2:latest
+    imagePullPolicy: IfNotPresent
+    name: eni-todo-h2
+    ports:
+      - name: http8080 
+        containerPort: 8080
+        protocol: TCP
+    startupProbe: 
+      httpGet:
+        #host: 127.0.0.1
+        path: "/eni-todo"
+        port: 8080
+        scheme : "HTTP"
+        httpHeaders :
+            - name : "x-kubeprob-header"
+              value : "startupProbe"
+      initialDelaySeconds : 300 
+      failureThreshold : 3 
+      periodSeconds : 30
+      successThreshold : 1
+      timeoutSeconds : 2
+    livenessProbe : 
+      httpGet:
+        path: "/eni-todo"
+        port: 8080
+        scheme : "HTTP"
+        httpHeaders :
+            - name : "x-kubeprob-header"
+              value : "startupProbe"
+      initialDelaySeconds : 300 
+      failureThreshold : 3 
+      periodSeconds : 30
+      successThreshold : 1
+      timeoutSeconds : 2
+    readinessProbe: 
+      httpGet:
+        #host: 127.0.0.1
+        path: "/eni-todo"
+        port: 8080
+        scheme : "HTTP"
+        httpHeaders :
+            - name : "x-kubeprob-header"
+              value : "startupProbe"
+      initialDelaySeconds : 300 
+      failureThreshold : 3 
+      periodSeconds : 30
+      successThreshold : 1
+      timeoutSeconds : 2
+    resources:
+      #requests:
+      #  cpu : "500"
+      #  memory: "512Mi"
+      limits:
+        cpu : "2000"
+        memory: "512Mi"
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File

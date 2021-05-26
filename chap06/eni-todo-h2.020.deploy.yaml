@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  generation: 1
+  labels:
+    app: eni-todo
+  name: eni-todo
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: eni-todo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: eni-todo
+    spec:
+      containers:
+      - image: eni-todo-tomcat-h2:latest
+        imagePullPolicy: IfNotPresent
+        name: eni-todo-tomcat-h2
+        ports:
+        - name: http8080 
+          containerPort: 8080
+          protocol: TCP
+        startupProbe: 
+          httpGet:
+            #host: 127.0.0.1
+            path: "/eni-todo"
+            port: 8080
+            scheme : "HTTP"
+            httpHeaders :
+                - name : "x-kubeprob-header"
+                  value : "startupProbe"
+          initialDelaySeconds : 300 
+          failureThreshold : 3 
+          periodSeconds : 30
+          successThreshold : 1
+          timeoutSeconds : 2
+        livenessProbe : 
+          httpGet:
+            path: "/eni-todo"
+            port: 8080
+            scheme : "HTTP"
+            httpHeaders :
+                - name : "x-kubeprob-header"
+                  value : "startupProbe"
+          initialDelaySeconds : 300 
+          failureThreshold : 3 
+          periodSeconds : 30
+          successThreshold : 1
+          timeoutSeconds : 2
+        readinessProbe: 
+          httpGet:
+            path: "/eni-todo"
+            port: 8080
+            scheme : "HTTP"
+            httpHeaders :
+                - name : "x-kubeprob-header"
+                  value : "startupProbe"
+          initialDelaySeconds : 300 
+          failureThreshold : 3 
+          periodSeconds : 30
+          successThreshold : 1
+          timeoutSeconds : 2
+        resources:
+          requests:
+            cpu : "500m"
+            memory: "512Mi"
+          limits:
+            cpu : "2000m"
+            memory: "512Mi"

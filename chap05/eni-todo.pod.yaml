@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+ name: eni
+spec:
+  containers:
+  - image: eni-todo:tomcat-h2-env
+    imagePullPolicy: IfNotPresent
+    name: eni
+    resources: {}

@@ -1,0 +1,64 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-config
+data:
+  mysql-user: "springuser"
+  mysql-database: "db_todo"
+  mysql-replica-user: "replication_user"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mariadb-secret
+data:
+  mysql-password: bXlwYXNzd29yZC1xdW9vci11aG9lN3o=
+  mysql-replica-password: bXVjMHlpdGVqYWhw
+  mysql-root-password: cjAwdC1hZWtpZThhaHdhaV8=
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: mariadump
+spec:
+  schedule: "15 23 * * *"
+  suspend: true
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: mariashowitems
+            image: mariadb:10.5.8
+            env:
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: mariadb-config
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mysql-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: mariadb-config
+                  key: mysql-database
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mysql-root-password
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            #- 'tail -f /dev/null'
+            #- 'mysql -h "mariadb" -P"3306" -u${MYSQL_USER} -p"${MYSQL_PASSWORD}" --database=db_todo -e "select * from todo_item;"'
+            - 'mysqldump -h "mariadb" -P"3306" -u${MYSQL_USER} -p"${MYSQL_PASSWORD}" --database db_todo'
+          restartPolicy: OnFailure
+        
+

@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  labels:
+    app: mariadb
+spec:
+  ports:
+  - port: 3306
+    name: mariadb
+  selector:
+    app: mariadb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: mariadb
+  name: mariadb
+spec:
+  selector:
+    matchLabels:
+      app: mariadb 
+  serviceName: "mariadb"
+  replicas: 1 
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      volumes:
+      - name: test-volume
+        hostPath:
+          path: /data/mariadb
+          type: DirectoryOrCreate
+      containers:
+      - image: mariadb:10.5.8
+        name: mariadb
+        resources:
+          requests:
+            cpu : "50m"
+            memory: "512Mi"
+          limits:
+            cpu : "2000m"
+            memory: "1024Mi"
+        env:
+        - name: MYSQL_USER
+          value: "springuser"
+        - name: MYSQL_PASSWORD
+          value: "mypassword-quoor-uHoe7z"
+        - name: MYSQL_DATABASE
+          value: "db_todo"
+        - name: MYSQL_ROOT_PASSWORD
+          value: "r00t-aeKie8ahWai_"
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: test-volume
+        ports:
+          - name: mariadb 
+            containerPort: 3306
+            protocol: TCP

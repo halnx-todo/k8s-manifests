@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  labels:
+    app: mariadb
+spec:
+  ports:
+  - port: 3306
+    name: mariadb
+  selector:
+    app: mariadb
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-config
+data:
+  mysql-user: "springuser"
+  mysql-database: "db_todo"
+  mysql-replica-user: "replication_user"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mariadb-secret
+data:
+  mysql-password: bXlwYXNzd29yZC1xdW9vci11aG9lN3o=
+  mysql-replica-password: bXVjMHlpdGVqYWhw
+  mysql-root-password: cjAwdC1hZWtpZThhaHdhaV8=
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-init
+data:
+  init.sh: |
+    #!/bin/sh
+
+    if [[ true ]]; then
+      echo "[mysqld]" >> /etc/mysql/conf.d/docker.cnf;
+      echo "skip-host-cache" >> /etc/mysql/conf.d/docker.cnf;
+      echo "skip-name-resolve" >> /etc/mysql/conf.d/docker.cnf;
+      echo "" >> /etc/mysql/conf.d/docker.cnf;
+      echo "docker.cnf OK";   
+    fi
+
+    if [[ "${HOSTNAME}" == 'mariadb-0' ]] ; then
+      echo "[mariadb]" >> /etc/mysql/conf.d/master.cnf;
+      echo "log-bin" >> /etc/mysql/conf.d/master.cnf;
+      echo "server_id=12340" >> /etc/mysql/conf.d/master.cnf;
+      echo "log-basename=master1" >> /etc/mysql/conf.d/master.cnf;
+      echo "binlog-format=mixed" >> /etc/mysql/conf.d/master.cnf;
+      echo "" >> /etc/mysql/conf.d/master.cnf; 
+      echo "master.cnf OK";
+    fi
+
+    if [[ "${HOSTNAME}" != 'mariadb-0' ]] ; then
+      echo "[mysqld]" >> /etc/mysql/conf.d/replicat.cnf;
+      echo "log-bin" >> /etc/mysql/conf.d/replicat.cnf;
+      echo "server_id=1234${HOSTNAME:(-1)}" >> /etc/mysql/conf.d/replicat.cnf;
+      echo "" >> /etc/mysql/conf.d/replicat.cnf;
+      echo "replicat.cnf OK";
+    fi
+  initRepl.sh: |
+    #!/bin/bash
+
+    if [[ "${HOSTNAME}" == 'mariadb-0' ]] ; then
+      mysql --skip-column-names --user=root --password=$MYSQL_ROOT_PASSWORD --database=mysql --execute="CREATE USER '${MYSQL_REPLICA_USER}'@'%' IDENTIFIED BY '${MYSQL_REPLICA_PASSWORD}'";
+      mysql --skip-column-names --user=root --password=$MYSQL_ROOT_PASSWORD --database=mysql --execute="GRANT REPLICATION SLAVE ON *.* TO '${MYSQL_REPLICA_USER}'@'%'";
+      mysql --skip-column-names --user=root --password=$MYSQL_ROOT_PASSWORD --database=mysql --execute="SHOW MASTER STATUS";
+    fi
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: mariadb
+  name: mariadb
+spec:
+  selector:
+    matchLabels:
+      app: mariadb 
+  serviceName: "mariadb"
+  replicas: 2 
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      volumes:
+      - name: data-volume
+        emptyDir: {}
+      - name: config-volume
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: "mariadb-init"
+      initContainers:
+        - name:  init-0
+          image: busybox:stable 
+          command:
+          - sh
+          - /config/init.sh
+          volumeMounts:
+          - name: config
+            mountPath: /config
+          - mountPath: /etc/mysql/conf.d/
+            name: config-volume 
+      terminationGracePeriodSeconds: 5
+      containers:
+      - image: mariadb:10.5.8
+        name: mariadb     
+        resources:
+          requests:
+            cpu : "50m"
+            memory: "512Mi"
+          limits:
+            cpu : "2000m"
+            memory: "1024Mi"
+        env:
+        - name: MYSQL_USER
+          valueFrom:
+            configMapKeyRef:
+              name: mariadb-config
+              key: mysql-user
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mariadb-secret
+              key: mysql-password
+        - name: MYSQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: mariadb-config
+              key: mysql-database
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mariadb-secret
+              key: mysql-root-password
+        - name: MYSQL_REPLICA_USER
+          valueFrom:
+            configMapKeyRef:
+              name: mariadb-config
+              key: mysql-replica-user
+        - name: MYSQL_REPLICA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mariadb-secret
+              key: mysql-replica-password
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data-volume
+        - mountPath: /etc/mysql/conf.d/
+          name: config-volume
+        livenessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        ports:
+          - name: mariadb 
+            containerPort: 3306
+            protocol: TCP

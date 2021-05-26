@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  labels:
+    app: mariadb
+spec:
+  ports:
+  - port: 3306
+    name: mariadb
+  selector:
+    app: mariadb
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-init
+data:
+  init.sh: |
+    #!/bin/sh
+
+    if [[ true ]]; then
+      echo "[mysqld]" >> /etc/mysql/conf.d/docker.cnf;
+      echo "skip-host-cache" >> /etc/mysql/conf.d/docker.cnf;
+      echo "skip-name-resolve" >> /etc/mysql/conf.d/docker.cnf;
+      echo "" >> /etc/mysql/conf.d/docker.cnf;
+      echo "docker.cnf OK";   
+    fi
+
+    if [[ "${HOSTNAME}" == 'mariadb-0' ]] ; then
+      echo "[mariadb]" >> /etc/mysql/conf.d/master.cnf;
+      echo "log-bin" >> /etc/mysql/conf.d/master.cnf;
+      echo "server_id=12340" >> /etc/mysql/conf.d/master.cnf;
+      echo "log-basename=master1" >> /etc/mysql/conf.d/master.cnf;
+      echo "binlog-format=mixed" >> /etc/mysql/conf.d/master.cnf;
+      echo "" >> /etc/mysql/conf.d/master.cnf; 
+      echo "master.cnf OK";
+    fi
+
+    if [[ "${HOSTNAME}" != 'mariadb-0' ]] ; then
+      echo "[mysqld]" >> /etc/mysql/conf.d/replicat.cnf;
+      echo "log-bin" >> /etc/mysql/conf.d/replicat.cnf;
+      echo "server_id=1234${HOSTNAME:(-1)}" >> /etc/mysql/conf.d/replicat.cnf;
+      echo "" >> /etc/mysql/conf.d/replicat.cnf;
+      echo "replicat.cnf OK";
+    fi
+  initRepl.sh: |
+    #!/bin/bash
+
+    if [[ "${HOSTNAME}" == 'mariadb-0' ]] ; then
+      mysql --skip-column-names --user=root --password=$MYSQL_ROOT_PASSWORD --database=mysql --execute="CREATE USER '${MYSQL_REPLICA_USER}'@'%' IDENTIFIED BY '${MYSQL_REPLICA_PASSWORD}'";
+      mysql --skip-column-names --user=root --password=$MYSQL_ROOT_PASSWORD --database=mysql --execute="GRANT REPLICATION SLAVE ON *.* TO '${MYSQL_REPLICA_USER}'@'%'";
+      mysql --skip-column-names --user=root --password=$MYSQL_ROOT_PASSWORD --database=mysql --execute="SHOW MASTER STATUS";
+    fi
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: mariadb
+  name: mariadb
+spec:
+  selector:
+    matchLabels:
+      app: mariadb 
+  serviceName: "mariadb"
+  replicas: 2 
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      volumes:
+      - name: data-volume
+        emptyDir: {}
+      - name: config-volume
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: "mariadb-init"
+      initContainers:
+        - name:  init-0
+          image: busybox:stable 
+          command:
+          - sh
+          - /config/init.sh
+          volumeMounts:
+          - name: config
+            mountPath: /config
+          - mountPath: /etc/mysql/conf.d/
+            name: config-volume 
+      terminationGracePeriodSeconds: 5
+      containers:
+      - image: mariadb:10.5.8
+        name: mariadb
+        #topologySpreadConstraints:
+        #- maxSkew: 1
+        #  topologyKey: kubernetes.io/hostname
+        #  whenUnsatisfiable: DoNotSchedule
+        #  labelSelector: app=mariadb
+        
+        resources:
+          requests:
+            cpu : "50m"
+            memory: "512Mi"
+          limits:
+            cpu : "2000m"
+            memory: "1024Mi"
+        env:
+        - name: MYSQL_USER
+          value: "springuser"
+        - name: MYSQL_PASSWORD
+          value: "mypassword-quoor-uHoe7z"
+        - name: MYSQL_DATABASE
+          value: "db_todo"
+        - name: MYSQL_ROOT_PASSWORD
+          value: "r00t-aeKie8ahWai_"
+        - name: MYSQL_REPLICA_USER
+          value: "replication_user"
+        - name: MYSQL_REPLICA_PASSWORD
+          value: "muc0YiteJahp"
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data-volume
+        - mountPath: /etc/mysql/conf.d/
+          name: config-volume
+        livenessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        ports:
+          - name: mariadb 
+            containerPort: 3306
+            protocol: TCP
