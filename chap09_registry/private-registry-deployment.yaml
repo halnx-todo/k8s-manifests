@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-registry-k8s
+  labels:
+    app: docker-registry-k8s
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: docker-registry-k8s
+  template:
+    metadata:
+      labels:
+        app: docker-registry-k8s
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - docker-registry-k8s
+              topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        role: infra
+      volumes:
+      - name: certs
+        secret:
+          secretName: ssl-key-cert-ingress
+      - name: registry-storage
+        persistentVolumeClaim:
+          claimName: registry-claim
+      containers:
+        - image: registry:2
+          name: docker-registry-k8s
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: REGISTRY_HTTP_TLS_CERTIFICATE
+            value: "/certs/tls.crt"
+          - name: REGISTRY_HTTP_TLS_KEY
+            value: "/certs/tls.key"
+          - name: REGISTRY_HTTP_ADDR
+            value: "0.0.0.0:5000"
+          - name: REGISTRY_STORAGE_DELETE_ENABLED
+            value: "true"
+          - name: REGISTRY_HTTP_SECRET
+            value: Mys3cr3t
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+          - name: certs
+            mountPath: /certs
+          - name: registry-storage
+            mountPath: /var/lib/registry
+          livenessProbe:
+           httpGet:
+             scheme: HTTPS
+             path: /v2/
+             port: 5000
+           initialDelaySeconds: 3
+           periodSeconds: 3
