@@ -25,7 +25,7 @@ spec:
         app: eni-todo
     spec:
       containers:
-      - image: registry.diehard.net:5000/tomcat-enitodo:dev
+      - image: registry.diehard.net:5000/tomcat-eni-todo-kub:dev
         imagePullPolicy: IfNotPresent
         name: eni-todo-tomcat-mysql
         env:
