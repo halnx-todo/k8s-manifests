@@ -15,9 +15,10 @@ spec:
         app: eni-todo
     spec:
       containers:
-      - image: eni-todo-tomcat-h2:latest
+      - image: eni-todo:tomcat-h2-env
+        #ou image: registry.diehard.net:5000/tomcat-eni-todo-h2-env:dev
         imagePullPolicy: IfNotPresent
-        name: eni-todo-tomcat-h2
+        name: eni-todo
         ports:
         - name: http8080 
           containerPort: 8080

@@ -6,9 +6,9 @@ metadata:
   name: eni-todo-mariadb
 spec:
   containers:
-  - image: eni-todo-tomcat-mariadb:latest
+  - image: eni-todo:tomcat-mariadb-env
     imagePullPolicy: IfNotPresent
-    name: eni-todo-h2
+    name: eni-todo
     env:
     - name: SPRING_PROFILES_ACTIVE
       value: "tomcat-mariadb-env"

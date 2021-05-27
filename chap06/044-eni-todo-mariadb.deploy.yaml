@@ -1,3 +1,4 @@
+# Simple Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,9 +26,10 @@ spec:
         app: eni-todo
     spec:
       containers:
-      - image: eni-todo-tomcat-mariadb:latest
+      - image: eni-todo:tomcat-mariadb-env
+        # ou image : registry.diehard.net:5000/tomcat-eni-todo:dev
         imagePullPolicy: IfNotPresent
-        name: eni-todo-tomcat-mariadb
+        name: eni-todo
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "tomcat-mariadb-env"

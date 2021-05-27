@@ -150,9 +150,10 @@ spec:
         emptyDir: {}          
       serviceAccount: khoolsa
       containers:
-      - image: kanedafromparis/khoolsession:eni-todo
-        imagePullPolicy: Always
-        name: eni-todo-tomcat-mariadb
+      - image: eni-todo:tomcat-mariadb-kub
+        #ou registry.diehard.net:5000/tomcat-eni-todo-kub:dev
+        imagePullPolicy: IfNotPresent
+        name: eni-todo
         env:
         - name: KUBERNETES_NAMESPACE
           valueFrom:

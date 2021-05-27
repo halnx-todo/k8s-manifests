@@ -6,9 +6,9 @@ metadata:
   name: eni-todo-mariadb
 spec:
   containers:
-  - image: eni-todo-tomcat-mariadb:latest
+  - image: eni-todo:tomcat-mariadb-env
     imagePullPolicy: IfNotPresent
-    name: eni-todo-h2
+    name: eni-todo
     env:
     - name: SPRING_PROFILES_ACTIVE
       value: "tomcat-mariadb-env"
@@ -16,8 +16,11 @@ spec:
       value: "springuser"
     - name: DB_DTB_PASSWORD
       value: "mypassword-quoor-uHoe7z"
+    # ATTENTION a utiliser la bonne ip de mariadb
+    # docker run ... puis minikube ip 
+    # ou sur infra01 (192.168.56.13:3306)
     - name: DB_DTB_JDBC_URL
-      value: "jdbc:mysql://192.168.99.128:3306/db_todo"
+      value: "jdbc:mysql://192.168.56.13:3306/db_todo"
     - name: MULTIPART_LOCATION
       value: "/usr/local/tomcat/files"
     ports:

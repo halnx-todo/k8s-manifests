@@ -48,9 +48,10 @@ spec:
     spec:
       serviceAccount: khoolsa
       containers:
-      - image: kanedafromparis/khoolsession:eni-todo
-        imagePullPolicy: Always
-        name: eni-todo-tomcat-mariadb
+      - image: eni-todo:tomcat-mariadb-kub
+        #ou registry.diehard.net:5000/tomcat-eni-todo-kub:dev
+        imagePullPolicy: IfNotPresent
+        name: eni-todo
         env:
         - name: KUBERNETES_NAMESPACE
           valueFrom:
@@ -76,7 +77,46 @@ spec:
         - name: http8080 
           containerPort: 8080
           protocol: TCP
-
+        startupProbe: 
+          httpGet:
+            #host: 127.0.0.1
+            path: "/eni-todo"
+            port: 8080
+            scheme : "HTTP"
+            httpHeaders :
+                - name : "x-kubeprob-header"
+                  value : "startupProbe"
+          initialDelaySeconds : 300 
+          failureThreshold : 3 
+          periodSeconds : 30
+          successThreshold : 1
+          timeoutSeconds : 2
+        livenessProbe : 
+          httpGet:
+            path: "/eni-todo"
+            port: 8080
+            scheme : "HTTP"
+            httpHeaders :
+                - name : "x-kubeprob-header"
+                  value : "startupProbe"
+          initialDelaySeconds : 300 
+          failureThreshold : 3 
+          periodSeconds : 30
+          successThreshold : 1
+          timeoutSeconds : 2
+        readinessProbe: 
+          httpGet:
+            path: "/eni-todo"
+            port: 8080
+            scheme : "HTTP"
+            httpHeaders :
+                - name : "x-kubeprob-header"
+                  value : "startupProbe"
+          initialDelaySeconds : 300 
+          failureThreshold : 3 
+          periodSeconds : 30
+          successThreshold : 1
+          timeoutSeconds : 2
         resources:
           requests:
             cpu : "500m"
