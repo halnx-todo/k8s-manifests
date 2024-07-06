@@ -3,10 +3,10 @@ kind: Deployment
 metadata:
   annotations:
     deployment.kubernetes.io/revision: "1"
-  generation: 1
   labels:
     app: eni-todo
   name: eni-todo
+  namespace: eni-todo
 spec:
   progressDeadlineSeconds: 600
   replicas: 2
@@ -24,19 +24,32 @@ spec:
       labels:
         app: eni-todo
     spec:
+      topologySpreadConstraints: 
+      - maxSkew: 2 
+        topologyKey: kubernetes.io/hostname 
+        whenUnsatisfiable: ScheduleAnyway 
+        labelSelector: 
+          matchLabels: 
+            app: eni-todo
       containers:
-      - image: registry.diehard.net:5000/tomcat-eni-todo-kub:dev
+      - # image: registry.diehard.net:5000/tomcat-enitodo:dev
+        image: registry.diehard.net:5000/tomcat-eni-todo:v24.04-tomcat-mariadb-kub
+        # image: kanedafromparis/itomcat-eni-todo:v24.04-tomcat-mariadb-kub
         imagePullPolicy: IfNotPresent
         name: eni-todo-tomcat-mysql
         env:
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         - name: MULTIPART_LOCATION
           value: "/usr/local/tomcat/file"
         - name: DB_DTB_JDBC_URL
-          value: "jdbc:mysql://gal-writer-svc.galera.svc.cluster.local:3306/db_todo"
+          value: "jdbc:mariadb://mariadb-galera-internal.mariadb.svc.cluster.local:3306/db_todo"
         - name: DB_DTB_USERNAME
           value: "springuser"
         - name: DB_DTB_PASSWORD
-          value: "mypassword-quoor-uHoe7z"
+          value: "hardpassword123456"
         ports:
         - name: http8080
           containerPort: 8080
@@ -91,8 +104,8 @@ spec:
           limits:
             cpu : "2000m"
             memory: "512Mi"
+      serviceAccountName: eni-todo-sa
       volumes:
       - name: multipart-storage
         persistentVolumeClaim:
           claimName: eni-todo-claim
- 

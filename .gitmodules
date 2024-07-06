@@ -1,0 +1,4 @@
+[submodule "halnx-todo/eni-tomcat-todo"]
+	path = halnx-todo/eni-tomcat-todo
+	url = git@github.com:halnx-todo/eni-tomcat-todo.git
+	branch = v24.04

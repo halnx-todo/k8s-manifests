@@ -4,7 +4,7 @@ metadata:
  name: eni
 spec:
   containers:
-  - image: eni-todo:tomcat-h2-env
+  - image: tomcat-eni-todo:v24.04-tomcat-h2-env
     imagePullPolicy: IfNotPresent
     name: eni
     resources: {}

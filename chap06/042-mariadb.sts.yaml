@@ -34,7 +34,7 @@ spec:
           path: /data/mariadb
           type: DirectoryOrCreate
       containers:
-      - image: mariadb:10.5.8
+      - image: mariadb:10.11.7
         name: mariadb
         resources:
           requests:

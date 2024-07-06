@@ -92,7 +92,7 @@ spec:
             name: config-volume 
       terminationGracePeriodSeconds: 5
       containers:
-      - image: mariadb:10.5.8
+      - image: mariadb:10.11.7
         name: mariadb
         #topologySpreadConstraints:
         #- maxSkew: 1

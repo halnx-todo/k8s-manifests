@@ -28,11 +28,13 @@ spec:
                   - docker-registry-k8s
               topologyKey: kubernetes.io/hostname
       nodeSelector:
-        role: infra
+        #role: infra
+        node-role.kubernetes.io/worker: infra
       volumes:
       - name: certs
         secret:
-          secretName: ssl-key-cert-ingress
+          #secretName: ssl-key-cert-ingress
+          secretName: ssl-key-cert
       - name: registry-storage
         persistentVolumeClaim:
           claimName: registry-claim
@@ -52,7 +54,8 @@ spec:
           - name: REGISTRY_HTTP_SECRET
             value: Mys3cr3t
           ports:
-            - containerPort: 5000
+            - name: dockereg
+              containerPort: 5000
           volumeMounts:
           - name: certs
             mountPath: /certs

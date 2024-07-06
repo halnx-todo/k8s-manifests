@@ -15,7 +15,7 @@ spec:
         app: eni-todo
     spec:
       containers:
-      - image: eni-todo:tomcat-h2-env
+      - image: tomcat-eni-todo:v24.04-tomcat-h2-env
         #ou image: registry.diehard.net:5000/tomcat-eni-todo-h2-env:dev
         imagePullPolicy: IfNotPresent
         name: eni-todo

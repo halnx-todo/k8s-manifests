@@ -17,7 +17,7 @@ data:
   mysql-replica-password: bXVjMHlpdGVqYWhw
   mysql-root-password: cjAwdC1hZWtpZThhaHdhaV8=
 ---
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: mariadump
@@ -30,7 +30,7 @@ spec:
         spec:
           containers:
           - name: mariashowitems
-            image: mariadb:10.5.8
+            image: mariadb:10.11.7
             env:
             - name: MYSQL_USER
               valueFrom:

@@ -16,13 +16,13 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  # On ne mets de labels pour mettre en avant 
-  # que le liens service--endpoint est sur 
-  #le nom et non sur les labels
+  # On ne mets pas de labels pour mettre en avant
+  # que le lien service--endpoint est sur
+  # le nom et non sur les labels
   #labels:
   #  app: ext-mariadb
   name: mariadb
-  namespace: example
+  #namespace: example
 subsets:
 - addresses:
   - ip: 192.168.99.128

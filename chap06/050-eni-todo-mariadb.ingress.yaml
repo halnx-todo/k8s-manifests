@@ -50,7 +50,7 @@ spec:
       - name: test-volume
         emptyDir: {}          
       containers:
-      - image: mariadb:10.5.8
+      - image: mariadb:10.11.7
         name: mariadb
         resources:
           requests:
@@ -148,9 +148,9 @@ spec:
       volumes:
       - name: file-volume
         emptyDir: {}          
-      serviceAccount: khoolsa
+      serviceAccountName: khoolsa
       containers:
-      - image: eni-todo:tomcat-mariadb-kub
+      - image: tomcat-eni-todo:tomcat-mariadb-kub
         #ou registry.diehard.net:5000/tomcat-eni-todo-kub:dev
         imagePullPolicy: IfNotPresent
         name: eni-todo
@@ -178,7 +178,7 @@ spec:
               name: mariadb-secret
               key: mysql-password
         - name: DB_DTB_JDBC_URL
-          value: "jdbc:mysql://mariadb-0.mariadb:3306/db_todo"
+          value: "jdbc:mariadb://mariadb-0.mariadb:3306/db_todo"
         - name: MULTIPART_LOCATION
           value: "/usr/local/tomcat/files"
         readinessProbe: 

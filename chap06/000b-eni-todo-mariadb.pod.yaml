@@ -6,7 +6,7 @@ metadata:
   name: eni-todo-mariadb
 spec:
   containers:
-  - image: eni-todo:tomcat-mariadb-env
+  - image: tomcat-eni-todo:v24.04-tomcat-mariadb-env
     imagePullPolicy: IfNotPresent
     name: eni-todo
     env:
@@ -20,7 +20,7 @@ spec:
     # docker run ... puis minikube ip 
     # ou sur infra01 (192.168.56.13:3306)
     - name: DB_DTB_JDBC_URL
-      value: "jdbc:mysql://192.168.56.13:3306/db_todo"
+      value: "jdbc:mariadb://192.168.56.13:3306/db_todo"
     - name: MULTIPART_LOCATION
       value: "/usr/local/tomcat/files"
     ports:

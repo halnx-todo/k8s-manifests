@@ -25,8 +25,8 @@ spec:
         app: eni-todo
     spec:
       containers:
-      - image: eni-todo:tomcat-h2-env
-        #ou image: registry.diehard.net:5000/tomcat-eni-todo-h2-env:dev
+      - image: tomcat-eni-todo:v24.04-tomcat-h2-env
+        #ou image: registry.diehard.net:5000/tomcat-eni-todo:v24.04-tomcat-h2-env
         imagePullPolicy: IfNotPresent
         name: eni-todo
         env:
@@ -37,7 +37,7 @@ spec:
         - name: DB_DTB_PASSWORD
           value: "mypassword-quoor-uHoe7z"
         - name: DB_DTB_JDBC_URL
-          value: "jdbc:mysql://mariadb:3306/db_todo"
+          value: "jdbc:mariadb://mariadb:3306/db_todo"
         - name: MULTIPART_LOCATION
           value: "/usr/local/tomcat/files"
         ports:

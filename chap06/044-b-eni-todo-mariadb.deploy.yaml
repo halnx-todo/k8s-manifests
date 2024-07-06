@@ -1,16 +1,22 @@
 # Deploy with ServiceAccount with view role in order to use session replication
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: examples-session
+spec: {}
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: khoolsa
-  namespace: example
+  namespace: examples-session
 ---
 # this should be tuned to have a more reduce access
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: view
-  namespace: example
+  namespace: examples-session
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -18,7 +24,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: khoolsa
-  namespace: example
+  namespace: examples-session
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,6 +35,7 @@ metadata:
   labels:
     app: eni-todo
   name: eni-todo
+  namespace: examples-session
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
@@ -46,9 +53,9 @@ spec:
       labels:
         app: eni-todo
     spec:
-      serviceAccount: khoolsa
+      serviceAccountName: khoolsa
       containers:
-      - image: eni-todo:tomcat-mariadb-kub
+      - image: tomcat-eni-todo:v24.04-tomcat-mariadb-kub
         #ou registry.diehard.net:5000/tomcat-eni-todo-kub:dev
         imagePullPolicy: IfNotPresent
         name: eni-todo
@@ -70,7 +77,7 @@ spec:
         - name: DB_DTB_PASSWORD
           value: "mypassword-quoor-uHoe7z"
         - name: DB_DTB_JDBC_URL
-          value: "jdbc:mysql://mariadb-0.mariadb:3306/db_todo"
+          value: "jdbc:mariadb://mariadb-0.mariadb:3306/db_todo"
         - name: MULTIPART_LOCATION
           value: "/usr/local/tomcat/files"
         ports:

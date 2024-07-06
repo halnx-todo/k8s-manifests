@@ -3,12 +3,16 @@ kind: Ingress
 metadata:
   name: private-registry-ingress
   annotations:
+    kubernetes.io/tls-acme: 'true'
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
 spec:
   tls:
   - hosts:
       - registry.diehard.net
-    secretName: ssl-key-cert-ingress
+    secretName: ssl-key-cert
   rules:
     - host: registry.diehard.net
       http:
