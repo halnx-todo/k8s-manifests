@@ -1,0 +1,198 @@
+#
+# https://github.com/nektos/act/issues/303 # do not works with podman (macosx)
+# podman machine init act-eni-todo --memory 62000 --cpus 8 --disk-size 150
+# podman machine start act-eni-todo
+# export DOCKER_HOST="unix://"$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}' act-eni-todo)do
+#  act --container-architecture linux/arm64 --verbose --platform  ubuntu-22.04=catthehacker/ubuntu:full-22.04
+#  act --container-architecture linux/arm64/v8 --platform  ubuntu-22.04=catthehacker/ubuntu:act-22.04 --container-daemon-socket -
+#  act --container-architecture linux/arm64/v8 --platform  ubuntu-22.04=catthehacker/ubuntu:java-tools-22.04 --container-daemon-socket -
+#  act --container-architecture linux/arm64/v8 --platform  ubuntu-22.04=catthehacker/ubuntu:java-tools-22.04 --reuse --container-daemon-socket -
+name: eni-todo-k8s-manifest integration test
+on:
+  push:
+    branches:
+      - "ci"
+jobs:
+  build_image:
+    #env:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check out eni-tomcat-todo java code
+        uses: actions/checkout@v4
+        with:
+          repository: "halnx-todo/eni-tomcat-todo"
+          ref: "v24.04" #
+          path: "eni-tomcat-todo"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push 'tomcat-eni-todo:v24.04-tomcat-h2-env'
+        if: false
+        uses: docker/build-push-action@v5
+        with:
+          context: eni-tomcat-todo/.
+          push: true
+          tags: kanedafromparis/tomcat-eni-todo:v24.04-tomcat-h2-env
+          target: eni-todo-tomcat-h2-env
+          cache-from: type=registry,ref=kanedafromparis/eni-todo:v24.04-tomcat-h2-env
+          cache-to: type=inline
+
+      - name: Build and push 'eni-todo:v24.04-tomcat-mariadb-env'
+        if: false
+        uses: docker/build-push-action@v5
+        with:
+          context: eni-tomcat-todo/.
+          push: true
+          tags: kanedafromparis/tomcat-eni-todo:v24.04-tomcat-mariadb-env
+          target: eni-todo-tomcat-mariadb-env
+          cache-from: type=registry,ref=kanedafromparis/eni-todo:v24.04-tomcat-mariadb-env
+          cache-to: type=inline
+
+
+  minikube_check_manifest :
+    #env:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: start minikube
+        id: minikube
+        uses: medyagh/setup-minikube@v0.0.16
+        with:
+          kubernetes-version: v1.29.3
+          addons: ingress
+          cache: true
+          cpus: max
+          memory: max
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Run images
+        run: |
+          eval $(minikube -p minikube docker-env) && docker images
+
+      - name: change repository for perf issue
+        # with minikube i would use tomcat-eni-todo with local build,
+        # but here a user 'halnx-todo' is force
+        run: |
+          grep -rl "image\: tomcat-eni-todo\:" chap05 | xargs sed -i'' -e 's@image: tomcat-eni-todo:@image: kanedafromparis/tomcat-eni-todo:@g'
+
+      - name: Run chap05-01
+        run: |          
+          kubectl apply -f chap05/eni-todo.pod.yaml &&\
+          echo "-------" &&\
+          kubectl get pod &&\
+          echo "-------" &&\
+          kubectl wait --for=condition=ready pod/eni --timeout=60s;
+          
+      - name: clean chap05-01
+        run: |
+          kubectl delete -f chap05/eni-todo.pod.yaml
+
+      - name: change repository for perf issue
+        # with minikube i would use tomcat-eni-todo with local build,
+        # but here a user 'halnx-todo' is force
+        run: |
+          grep -rl "image\: tomcat-eni-todo\:" chap06 | xargs sed -i'' -e 's@image: tomcat-eni-todo:@image: kanedafromparis/tomcat-eni-todo:@g'
+
+      # the following kubernetes apply have few check mostly due to ressources limites
+      # of the runner size on git-hub, so it only check the apply (aka file format)
+      - name: Run chap06-000-020
+        run: |
+          kubectl describe nodes
+          echo '-----'
+          kubectl create ns 000
+          kubectl -n 000 apply -f chap06/000-eni-todo-h2.pod.yaml
+          kubectl create ns 001
+          kubectl -n 001 apply -f chap06/001-eni-todo-h2.pod.yaml
+          kubectl create ns 002
+          kubectl -n 002 apply -f chap06/002-eni-todo-h2.pod.yaml
+          kubectl create ns 010
+          kubectl -n 010 apply -f chap06/010-eni-todo-h2.rs.yaml
+          kubectl create ns 020
+          kubectl -n 020 apply -f chap06/020-eni-todo-h2.deploy.yaml
+          kubectl -n 000 describe po
+          kubectl delete ns 000
+          sleep 180
+          kubectl -n 001 describe po
+          kubectl delete ns 001
+          kubectl -n 020 describe po
+          kubectl delete ns 010
+          sleep 180          
+          kubectl delete ns 020
+      - name: Run chap06-030
+        run: |
+          kubectl create ns 030
+          kubectl -n 030 apply -f chap06/030-eni-todo.svc.yaml
+          kubectl -n 030 apply -f chap06/032-eni-todo.svc.yaml
+          kubectl -n 030 apply -f chap06/033-eni-todo.svc.ep.yaml
+          kubectl -n 030 apply -f chap06/034-eni-todo-mariadb.deploy.yaml
+          kubectl -n 030 describe po
+          kubectl delete ns 030
+          
+      - name: Run chap06-040
+        run: |
+          kubectl create ns 040
+          kubectl -n 040 apply -f chap06/041-mariadb.pod.yaml
+          kubectl -n 040 apply -f chap06/042-mariadb.sts.yaml
+          kubectl -n 040 apply -f chap06/043-mariadb.sts.yaml
+          kubectl -n 040 apply -f chap06/044-eni-todo-mariadb.deploy.yaml
+          sleep 30
+          kubectl -n 040 get po
+          sleep 10
+          kubectl -n 040 describe po
+          kubectl delete ns 040
+
+      - name: Run chap06-043b
+        run: |
+          kubectl create ns 043b
+          kubectl -n 043b apply -f chap06/043b-mariadb.sts.yaml
+          kubectl apply -f chap06/044-b-eni-todo-mariadb.deploy.yaml
+          sleep 30
+          kubectl -n 043b get svc,configmap,sts,po          
+          kubectl delete ns 043b examples-session
+
+      - name: Run chap06-050
+        run: |
+          sed -i'' -e 's@namespace: example@namespace: \"050\"@g' chap06/050-eni-todo-mariadb.ingress.yaml
+          kubectl create ns 050
+          kubectl -n 050 apply -f chap06/050-eni-todo-mariadb.ingress.yaml          
+          sleep 30
+          kubectl -n 050 get ingress          
+          kubectl delete ns 050
+
+      - name: Run chap06-060
+        run: |
+          kubectl create ns 060
+          kubectl -n 060 apply -f chap06/063-eni-todo-mariadb.cronjob.yaml          
+          sleep 30
+          kubectl -n 060 get svc,configmap,sts,cronjob.batch,po          
+          kubectl delete ns 060
+
+      - name: Run chap08-00
+        run: |
+          kubectl create ns 080
+          kubectl -n 080 apply -f chap08/chap08_first-test/nginx-deploy.yaml
+          kubectl -n 080 expose deployment/my-nginx 
+          kubectl -n 080 apply -f chap08/chap08_first-test/nginx-ingress.yaml
+          sleep 30
+          kubectl -n 080 get svc,deploy,ing,po          
+          kubectl delete ns 080
